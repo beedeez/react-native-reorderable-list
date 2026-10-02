@@ -596,7 +596,7 @@ const ReorderableListCore = <T,>(
 	const reorder = (fromIndex: number, toIndex: number) => {
 		runOnUI(resetSharedValues)();
 
-		if (fromIndex !== toIndex) {
+		if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
 			markCells(fromIndex, toIndex);
 			onReorder({ from: fromIndex, to: toIndex });
 		}
@@ -779,8 +779,12 @@ const ReorderableListCore = <T,>(
 							duration: animationDurationProp.value,
 							easing: Easing.out(Easing.ease),
 						},
-						() => {
-							runOnJS(reorder)(draggedIndex.value, currentIndex.value);
+						finished => {
+							// With Reanimated 4 the callback fires again with finished=false once
+							// resetSharedValues overwrites dragXY, after draggedIndex was reset to -1.
+							if (finished) {
+								runOnJS(reorder)(draggedIndex.value, currentIndex.value);
+							}
 						},
 					);
 				} else {
