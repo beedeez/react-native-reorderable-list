@@ -12,7 +12,6 @@ import {
 	CellRendererProps,
 	FlatList,
 	FlatListProps,
-	InteractionManager,
 	LayoutChangeEvent,
 	Platform,
 	ScrollView,
@@ -53,6 +52,10 @@ import {
 } from './constants';
 import { ReorderableListCell } from './ReorderableListCell';
 import { usePropAsSharedValue, useStableCallback } from '../hooks';
+
+// React Native provides these globals (InteractionManager is gone in 0.87+); the 0.76 typings used here don't declare them.
+declare function requestIdleCallback(callback: () => void): number;
+declare function cancelIdleCallback(handle: number): void;
 
 const AnimatedFlatList = Animated.createAnimatedComponent(
 	FlatList,
@@ -225,8 +228,8 @@ const ReorderableListCore = <T,>(
 			return;
 		}
 
-		// Can be heavy to loop through all items, defer the task to run after interactions.
-		const task = InteractionManager.runAfterInteractions(() => {
+		// Can be heavy to loop through all items, defer the task until the JS thread is idle.
+		const handle = requestIdleCallback(() => {
 			if (!markedCellsRef.current) {
 				return;
 			}
@@ -243,7 +246,7 @@ const ReorderableListCore = <T,>(
 		});
 
 		return () => {
-			task.cancel();
+			cancelIdleCallback(handle);
 		};
 	}, [data]);
 
